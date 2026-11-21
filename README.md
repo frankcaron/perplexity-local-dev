@@ -20,9 +20,10 @@ No cloud round-trips for the file/shell work: everything happens locally, and sk
 
 ## Generalized skills
 
-Skills are plain-text instruction files the agent loads when a task matches. This repo ships one:
+Skills are plain-text instruction files the agent loads when a task matches. This repo ships two, under `.agents/skills/`:
 
 - **`code-review`** (`.agents/skills/code-review/`) — a language-agnostic, read-only review pass: it collects the diff, reads the changed code and its context, walks a checklist, and reports findings by severity with file/line references and concrete suggested fixes.
+- **`develop`** (`.agents/skills/develop/`) — takes a set of instructions, runs discovery on the repo (detecting its language, tooling, and conventions), then implements the change in the repo's own language with tests, and verifies it end-to-end.
 
 Skills are the unit of reuse. A "generalized" skill is not tied to one project — it travels with the repo (or your agent) and applies to any codebase, the way Claude Code skills generalize across repos.
 
