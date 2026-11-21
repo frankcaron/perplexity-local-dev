@@ -1,2 +1,15 @@
-# perplexity-local-dev
-A local dev repo for testing Perplexity Local Compute
+# Perplexity Local Dev
+
+A basic Python hello-world project.
+
+## Run
+
+```bash
+python3 main.py
+```
+
+## Test
+
+```bash
+python3 -m pytest
+```

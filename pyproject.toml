@@ -1,0 +1,11 @@
+[project]
+name = "perplexity-local-dev"
+version = "0.1.0"
+description = "A local dev repo for testing Perplexity Local Compute"
+requires-python = ">=3.9"
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["."]
