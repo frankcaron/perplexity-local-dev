@@ -29,8 +29,12 @@ Skills are the unit of reuse. A "generalized" skill is not tied to one project â
 ## Run it
 
 ```bash
-# activate a virtual environment (see "venv" below)
+# create and activate a virtual environment
+python3 -m venv .venv
 source .venv/bin/activate
+
+# install the project (the dev extra brings in pytest)
+pip install -e ".[dev]"
 
 # run the program
 python main.py
