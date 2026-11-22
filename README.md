@@ -4,23 +4,23 @@ A minimal Python sample project that demonstrates a **Claude Code style, fully a
 
 The point of this repo is not the code but the *workflow*: how a local agent can take a project from blank repo to tested, documented software end-to-end, with reusable skills doing the heavy lifting.
 
+The entire repo was built progressively using Perplexity's local PPLX Pro (27B) model, tuned for Perplexity Computer. It peaked at about 72 tokens/sec on a 2026 Mac Studio with an M5 Max and 64GB of RAM.
+
 ## The Agentic SDLC
 
 Perplexity Local Computer runs entirely on your machine: it has a workspace (this repo), a shell, and a set of skills in the spirit of PROSE that run the SDLC as follows:
 
-1. **Plan** — you describe an outcome ("add a greeting function", "write tests"). The `planner` skill inspects the repo and writes a `plan.md` that specs out the approach, files, steps, and acceptance criteria.
-2. **Develop** — the `builder` skill runs a squence against the `plan.md`, starting with `develop` skill runs discovery (detecting the repo's language, tooling, and conventions), then implements the change in that language with tests, then...
-3. **Review** — the `code-review` skill catches issues; the agent iterates until clean, and finally...
-4. **Document** — the `document` skill adds targeted comments and docstrings and updates the README with key call-outs.
+1. **Plan** — you describe an outcome and a plan is produced
+2. **Develop** — the plan is then used for test-driven development
+3. **Review** — the code produced via TDD is then reviewed and hardened
+4. **Document** — the approved code is then finalized with human-readable docs
 5. **Repeat** — each new request continues from the current repo state, so the project compounds over time.
 
 No cloud round-trips for the file/shell work: everything happens locally, and skills keep the agent's behavior consistent across sessions.
 
 ### The Skill Set
 
-This repo ships five homebrew skills that drive the SDLC, under `.agents/skills/`.
-
-The first two would be the equivalent to Claude Agents (`agents.md`), albeit Perplexity currently doesn't support the concept in the same way (albeit this is changing with the new Teammates feature): 
+This repo ships five homebrew skills that drive the SDLC, under `.agents/skills/`. The first two would be the equivalent to Claude Agents (`agents.md`): 
 
 - **`planner`** (`.agents/skills/planner/`) — The Product Manager of the pipeline. It takes a build instruction, runs discovery on the repo, and writes a **`plan.md`** that specs out how to approach the build: the approach, the files to touch, ordered steps, risks, and testable acceptance criteria. It writes a plan, not code — it is the feeder for `develop`/`builder`, keeping the build's context tight and deliberate.
 - **`builder`** (`.agents/skills/builder/`) — The Engineer of the pipeline. It reads a **`plan.md`** and sequences the skills above to take the plan all the way to done: **build** (`develop`) → **verify** → **review & improve** (`code-review`) → **document** (`document`) → final gate. It requires a `plan.md` to exist — if there is none, it stops and redirects to the `planner` skill to produce one, rather than re-planning or running discovery itself. Use it to "ship the feature in `plan.md` end to end."
@@ -40,8 +40,6 @@ The `planner` skill builds out a plan.md file with the full spec for the game; e
 > Use the builder skill to execute the plan.md
 
 The `builder` skill then drives the whole delivery in one pass: **develop** built the game and its tests, **code-review** caught and fixed issues, and **document** added the docstrings and call-outs you see here.
-
-The entire repo was built progressively using Perplexity's local PPLX Pro (27B) model, tuned for Perplexity Computer. It peaked at about 72 tokens/sec on a 2026 Mac Studio with an M5 Max and 64GB of RAM.
 
 ### The Output
 
