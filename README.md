@@ -45,9 +45,9 @@ The `builder` skill then drives the whole delivery in one pass: **develop** buil
 
 Included for reference is the one-shot pass output, just as an example of what the local model produces:
 
-- **`main.py`** — the game: a 5-floor dungeon crawl. Each floor holds one enemy (giant rat up to dark knight); you fight with `attack`, check `status`, open the `shop`, or `quit`. You gain XP for every kill, level up (with stat growth and a full heal), and can spend gold on potions and weapon upgrades. Clear the final floor to win; hit 0 HP and you fall.
-- **`rpg.py`** — the rules: enemy selection, damage/counter resolution, gold and XP rewards, leveling math (XP thresholds, per-level stat growth), and the shop catalog (potion/weapon prices and effects). Deliberately side-effect-free so the game loop in `main.py` owns all state.
-- **`test_main.py`** — 31 tests covering the combat math, leveling and shop rules, and the CLI game loop (fed through stdin, output captured).
+- **`main.py`** — the game: a dungeon crawl of random depth (5–50 floors). Each floor holds one enemy (giant rat up to dark knight); you fight with `attack`, check `status`, open the `shop`, or `quit`. You gain XP for every kill, level up (with stat growth and a full heal), and can spend gold on potions and weapon upgrades. Enemies grow stronger and more rewarding as you climb; your own power grows with the floor too. Clear the final floor to win; hit 0 HP and you fall.
+- **`rpg.py`** — the rules: enemy selection (with floor-scaled HP), damage/counter resolution, floor-scaled gold and XP rewards, floor-scaled player growth, leveling math (XP thresholds, per-level stat growth), and the shop catalog (potion/weapon prices and effects). Deliberately side-effect-free so the game loop in `main.py` owns all state.
+- **`test_main.py`** — 47 tests covering the combat math, floor scaling, leveling and shop rules, and the CLI game loop (fed through stdin, output captured).
 
 ## Usage
 

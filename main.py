@@ -3,8 +3,9 @@
 Run ``python main.py`` to play.  The game is a floor-by-floor crawl: each floor
 holds one enemy, you fight it with the ``attack`` command, loot the gold and
 XP, and move on.  You can open the ``shop`` any time to buy health potions and
-weapon upgrades.  You win by clearing the final floor; you lose when your hit
-points reach zero.
+weapon upgrades.  Each run opens a dungeon of random depth (5–50 floors) and
+the enemies grow stronger and more rewarding the higher you climb.  You win by
+clearing the final floor; you lose when your hit points reach zero.
 """
 
 from __future__ import annotations
@@ -19,9 +20,11 @@ from rpg import (
     attack,
     buy_potion,
     buy_weapon,
+    floor_bonus_stats,
     gain_xp,
     level_stats,
     pick_enemy,
+    random_floor_count,
     reward,
     use_potion,
     weapon_damage,
@@ -30,16 +33,17 @@ from rpg import (
 )
 
 
-def rpg_weapon_damage(level: int, upgrades: int) -> int:
-    """Total weapon damage: level growth + shop upgrades."""
-    return weapon_damage(level, upgrades)
+def rpg_weapon_damage(level: int, upgrades: int, floor: int = 1) -> int:
+    """Total weapon damage: level growth + shop upgrades + floor bonus."""
+    return weapon_damage(level, upgrades) + floor_bonus_stats(floor)[1]
 
 
-def banner() -> None:
+def banner(final_floor: int) -> None:
     """Print the title block shown when the game starts."""
     print("=" * 40)
     print("  DUNGEON CRAWLER")
     print("  A tiny text-based RPG")
+    print(f"  Dungeon depth: {final_floor} floors")
     print("=" * 40)
     print()
 
@@ -119,25 +123,28 @@ def play_shop(
 def play(rng: random.Random, final_floor: int = 5) -> None:
     """Run the game loop until the player wins, dies, or quits.
 
-    ``final_floor`` caps the dungeon at five floors by default; tests pass a
-    smaller value to keep scripted playthroughs short and deterministic.
+    ``final_floor`` caps the dungeon depth; ``main`` passes a random draw from
+    ``random_floor_count`` so each run opens a dungeon of 5–50 floors, while
+    tests pass an explicit value (default 5) to keep scripted playthroughs
+    short and deterministic.  Enemy HP and rewards scale with the floor, and the
+    player's max HP and weapon damage grow with it too.
     """
     floor = 1
     level = 1
     xp = 0
-    max_hp, _ = level_stats(level)
+    max_hp = level_stats(level)[0] + floor_bonus_stats(floor)[0]
     hp = max_hp
     gold = 0
     potions = 0
     weapon_upgrades = 0
     enemy_name, enemy_hp = pick_enemy(rng, floor)
 
-    banner()
+    banner(final_floor)
     print("Commands: attack, status, shop, use potion, quit")
     print()
 
     while True:
-        weapon_damage = rpg_weapon_damage(level, weapon_upgrades)
+        weapon_damage = rpg_weapon_damage(level, weapon_upgrades, floor)
         print(f"Floor {floor} of {final_floor}: a {enemy_name} blocks the way "
               f"({enemy_hp} HP).")
         print(status_line(hp, max_hp, level, xp, weapon_damage, gold, potions))
@@ -181,15 +188,15 @@ def play(rng: random.Random, final_floor: int = 5) -> None:
         enemy_before = enemy_hp
         hp, enemy_hp = attack(hp, enemy_hp, weapon_damage, rng)
         if enemy_hp <= 0:
-            gold_gain = reward()
-            xp_gain = xp_reward()
+            gold_gain = reward(floor)
+            xp_gain = xp_reward(floor)
             gold += gold_gain
             old_level = level
             xp, level = gain_xp(xp, level, xp_gain)
             if level > old_level:
-                max_hp, _ = level_stats(level)
+                max_hp = level_stats(level)[0] + floor_bonus_stats(floor)[0]
                 hp = max_hp  # full heal on level up
-                new_dmg = rpg_weapon_damage(level, weapon_upgrades)
+                new_dmg = rpg_weapon_damage(level, weapon_upgrades, floor)
                 print(f"Level up! You are now level {level} "
                       f"({max_hp} HP, {new_dmg} weapon damage).")
             print(f"You slay the {enemy_name}! (+{gold_gain} gold, "
@@ -199,6 +206,7 @@ def play(rng: random.Random, final_floor: int = 5) -> None:
                       f"with {hp} HP and {gold} gold. Victory!")
                 return
             floor += 1
+            max_hp = level_stats(level)[0] + floor_bonus_stats(floor)[0]
             enemy_name, enemy_hp = pick_enemy(rng, floor)
             print(f"You descend to floor {floor}...")
         else:
@@ -214,9 +222,9 @@ def play(rng: random.Random, final_floor: int = 5) -> None:
 
 
 def main() -> None:
-    """Entry point: seed the RNG and start the game."""
+    """Entry point: seed the RNG, draw the dungeon depth, and start the game."""
     rng = random.Random()
-    play(rng)
+    play(rng, random_floor_count(rng))
 
 
 if __name__ == "__main__":

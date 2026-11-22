@@ -16,7 +16,8 @@ PLAYER_DAMAGE = 12
 ENEMY_DAMAGE = 4
 
 # Enemies that can appear, from weakest to strongest.  Each is a
-# (display_name, max_hit_points) pair.
+# (display_name, base_hit_points) pair.  Deep floors reuse the strongest
+# entry's name but scale its HP up with the floor (see pick_enemy).
 ENEMIES = [
     ("giant rat", 20),
     ("cave bat", 25),
@@ -25,7 +26,23 @@ ENEMIES = [
     ("dark knight", 60),
 ]
 
-# Gold the player pockets for each enemy defeated.
+# Dungeon depth: each run opens a dungeon with a random number of floors,
+# drawn uniformly between MIN_FLOOR_COUNT and MAX_FLOOR_COUNT (inclusive).
+MIN_FLOOR_COUNT = 5
+MAX_FLOOR_COUNT = 50
+
+# Floor difficulty scaling.  Enemy HP rises by ENEMY_HP_FLOOR_STEP for each
+# floor above the first, so the climb gets harder; gold and XP rewards rise in
+# step so higher floors are also more lucrative.  The player's own power grows
+# more gently (FLOOR_HP_GAIN / FLOOR_DAMAGE_GAIN per floor) so each floor is a
+# little harder to clear while a full run stays achievable with shop upgrades.
+ENEMY_HP_FLOOR_STEP = 10
+REWARD_GOLD_FLOOR_STEP = 5
+XP_FLOOR_STEP = 10
+FLOOR_HP_GAIN = 4
+FLOOR_DAMAGE_GAIN = 2
+
+# Gold the player pockets for each enemy defeated, on floor 1.
 REWARD_GOLD = 10
 
 # Leveling: each kill grants XP_PER_KILL experience; advancing past the
@@ -48,15 +65,27 @@ WEAPON_DAMAGE_GAIN = 5
 BASE_MAX_HP = 50
 
 
+def random_floor_count(rng: random.Random) -> int:
+    """Draw the dungeon depth for a new run.
+
+    Returns a uniformly random integer between MIN_FLOOR_COUNT and
+    MAX_FLOOR_COUNT (inclusive) using the given ``rng``.
+    """
+    return rng.randint(MIN_FLOOR_COUNT, MAX_FLOOR_COUNT)
+
+
 def pick_enemy(rng: random.Random, floor: int) -> tuple[str, int]:
     """Choose an enemy for ``floor``.
 
-    The index is clamped to the last entry in the enemy table, so deep
-    floors always face the strongest foe (no cycling or re-spawns).
-    ``rng`` is reserved for future randomness and currently unused.
+    The name is clamped to the last entry in the enemy table, so deep floors
+    reuse the strongest foe (no cycling or re-spawns).  The enemy's HP is that
+    entry's base plus ``ENEMY_HP_FLOOR_STEP`` for each floor above the first, so
+    the climb gets harder: the floor-1 giant rat stays at 20 HP, while a floor-50
+    dark knight reaches 60 + 10 * 49 = 550 HP.  ``rng`` is reserved for future
+    randomness and currently unused.
     """
-    name, max_hp = ENEMIES[min(floor - 1, len(ENEMIES) - 1)]
-    return name, max_hp
+    name, base_hp = ENEMIES[min(floor - 1, len(ENEMIES) - 1)]
+    return name, base_hp + ENEMY_HP_FLOOR_STEP * (floor - 1)
 
 
 def attack(
@@ -73,14 +102,22 @@ def attack(
     return max(0, player_hp), max(0, enemy_hp)
 
 
-def reward() -> int:
-    """Gold awarded for a single victory."""
-    return REWARD_GOLD
+def reward(floor: int) -> int:
+    """Gold awarded for a victory on ``floor``.
+
+    Rises by ``REWARD_GOLD_FLOOR_STEP`` for each floor above the first, so
+    higher floors pay more.  Floor 1 returns the base ``REWARD_GOLD``.
+    """
+    return REWARD_GOLD + REWARD_GOLD_FLOOR_STEP * (floor - 1)
 
 
-def xp_reward() -> int:
-    """Experience awarded for a single victory."""
-    return XP_PER_KILL
+def xp_reward(floor: int) -> int:
+    """Experience awarded for a victory on ``floor``.
+
+    Rises by ``XP_FLOOR_STEP`` for each floor above the first, so higher floors
+    grant more XP.  Floor 1 returns the base ``XP_PER_KILL``.
+    """
+    return XP_PER_KILL + XP_FLOOR_STEP * (floor - 1)
 
 
 def xp_to_next(level: int) -> int:
@@ -116,6 +153,18 @@ def level_stats(level: int) -> tuple[int, int]:
         BASE_MAX_HP + LEVEL_HP_GAIN * bonus,
         PLAYER_DAMAGE + LEVEL_DAMAGE_GAIN * bonus,
     )
+
+
+def floor_bonus_stats(floor: int) -> tuple[int, int]:
+    """Return the ``(extra_max_hp, extra_weapon_damage)`` a floor grants.
+
+    Grows linearly with depth: ``FLOOR_HP_GAIN`` extra max HP and
+    ``FLOOR_DAMAGE_GAIN`` extra weapon damage for each floor above the first.
+    Floor 1 returns ``(0, 0)``.  The game loop adds this on top of the
+    level-based stats so the player grows a little with the climb.
+    """
+    bonus = floor - 1
+    return FLOOR_HP_GAIN * bonus, FLOOR_DAMAGE_GAIN * bonus
 
 
 def weapon_damage(level: int, upgrades: int) -> int:
