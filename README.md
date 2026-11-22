@@ -25,7 +25,9 @@ This repo ships five homebrew skills that drive the SDLC, under `.agents/skills/
 - **`planner`** (`.agents/skills/planner/`) — The Product Manager of the pipeline. It takes a build instruction, runs discovery on the repo, and writes a **`plan.md`** that specs out how to approach the build: the approach, the files to touch, ordered steps, risks, and testable acceptance criteria. It writes a plan, not code — it is the feeder for `develop`/`builder`, keeping the build's context tight and deliberate.
 - **`builder`** (`.agents/skills/builder/`) — The Engineer of the pipeline. It reads a **`plan.md`** and sequences the skills above to take the plan all the way to done: **build** (`develop`) → **verify** → **review & improve** (`code-review`) → **document** (`document`) → final gate. It requires a `plan.md` to exist — if there is none, it stops and redirects to the `planner` skill to produce one, rather than re-planning or running discovery itself. Use it to "ship the feature in `plan.md` end to end."
 
-These "generalized" skills are not tied to the project — they travel with the repo (or your agent) and can apply to any codebase, the way Claude Code skills generalize across repos. Unfortunately, Perplexity as a platform requires you to upload these as skills into your account, and there is no automated pipeline for this today. Nevertheless, the local inference can reference them when present in a repo with the following prompts; it just eats the context window up, which can be problematic with verbose skills given the smaller local models.
+These "generalized" skills are not tied to the project — they travel with the repo (or your agent) and can apply to any codebase, the way Claude Code skills generalize across repos. 
+
+Unfortunately, Perplexity as a platform requires you to upload these as skills into your account, and there is no automated pipeline for this today. Nevertheless, the local inference can reference them when present in a repo with the following prompts; it just eats the context window up, which can be problematic with verbose skills given the smaller local models.
 
 ## The Test One-Shot
 
