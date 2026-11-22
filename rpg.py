@@ -51,8 +51,9 @@ BASE_MAX_HP = 50
 def pick_enemy(rng: random.Random, floor: int) -> tuple[str, int]:
     """Choose an enemy for ``floor``.
 
-    The index is clamped to the enemy table, so early floors get weak foes
-    and deep floors cycle through the strongest ones (plus a few re-spawns).
+    The index is clamped to the last entry in the enemy table, so deep
+    floors always face the strongest foe (no cycling or re-spawns).
+    ``rng`` is reserved for future randomness and currently unused.
     """
     name, max_hp = ENEMIES[min(floor - 1, len(ENEMIES) - 1)]
     return name, max_hp
@@ -64,6 +65,7 @@ def attack(
     """Resolve one round: player hits first, then the enemy counters if alive.
 
     Returns the new ``(player_hp, enemy_hp)`` pair, each clamped at zero.
+    ``rng`` is reserved for future randomness and currently unused.
     """
     enemy_hp -= weapon_damage
     if enemy_hp > 0:
@@ -116,21 +118,40 @@ def level_stats(level: int) -> tuple[int, int]:
     )
 
 
+def weapon_damage(level: int, upgrades: int) -> int:
+    """Total weapon damage for a player at ``level`` with ``upgrades``.
+
+    Combines the level-based damage growth with the flat bonus from each
+    shop weapon upgrade, so upgrades persist across level-ups.
+    """
+    return level_stats(level)[1] + WEAPON_DAMAGE_GAIN * upgrades
+
+
 def weapon_price(upgrades: int) -> int:
     """Price of the next weapon upgrade; each purchase raises the cost."""
     return BASE_WEAPON_PRICE + WEAPON_PRICE_STEP * upgrades
 
 
-def buy_potion(hp: int, max_hp: int, gold: int) -> tuple[int, int] | None:
+def buy_potion(gold: int) -> int | None:
     """Buy a health potion for POTION_PRICE.
 
-    Returns ``(new_hp, new_gold)`` with the heal applied (capped at max HP),
-    or ``None`` if the player cannot afford it, is already at full HP, or is
-    in an invalid state (``hp`` outside ``0..max_hp``).
+    Returns the remaining gold after the purchase, or ``None`` if the
+    player cannot afford it.  No HP logic: buying no longer heals.
     """
-    if gold < POTION_PRICE or hp >= max_hp or hp < 0:
+    if gold < POTION_PRICE:
         return None
-    return min(max_hp, hp + POTION_HEAL), gold - POTION_PRICE
+    return gold - POTION_PRICE
+
+
+def use_potion(hp: int, max_hp: int, potions: int) -> tuple[int, int] | None:
+    """Drink a held potion: heal POTION_HEAL HP (capped at max) and decrement.
+
+    Returns ``(new_hp, new_potions)`` on success, or ``None`` if the player
+    has no potions or is already at full HP (do not waste a potion).
+    """
+    if potions <= 0 or hp >= max_hp:
+        return None
+    return min(max_hp, hp + POTION_HEAL), potions - 1
 
 
 def buy_weapon(gold: int, upgrades: int) -> tuple[int, int] | None:

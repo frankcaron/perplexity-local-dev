@@ -15,6 +15,8 @@ from rpg import (
     level_stats,
     pick_enemy,
     reward,
+    use_potion,
+    weapon_damage,
     weapon_price,
     xp_reward,
     xp_to_next,
@@ -95,20 +97,37 @@ def test_weapon_price_rises_with_upgrades():
     assert weapon_price(2) == 50
 
 
-def test_buy_potion_heals_to_cap():
-    assert buy_potion(20, 50, 15) == (45, 0)
-
-
-def test_buy_potion_caps_at_max_hp():
-    assert buy_potion(40, 50, 15) == (50, 0)
+def test_buy_potion_deducts_gold():
+    assert buy_potion(15) == 0
 
 
 def test_buy_potion_rejects_when_poor():
-    assert buy_potion(20, 50, 14) is None
+    assert buy_potion(14) is None
 
 
-def test_buy_potion_rejects_at_full_hp():
-    assert buy_potion(50, 50, 15) is None
+def test_use_potion_heals_and_caps_at_max_hp():
+    assert use_potion(20, 50, 1) == (45, 0)
+    assert use_potion(40, 50, 1) == (50, 0)
+
+
+def test_use_potion_none_with_zero_potions():
+    assert use_potion(20, 50, 0) is None
+
+
+def test_use_potion_none_at_full_hp():
+    assert use_potion(50, 50, 1) is None
+
+
+def test_weapon_damage_base():
+    assert weapon_damage(1, 0) == 12
+
+
+def test_weapon_damage_level_growth():
+    assert weapon_damage(2, 0) == 15
+
+
+def test_weapon_damage_with_upgrades():
+    assert weapon_damage(2, 2) == 25
 
 
 def test_buy_weapon_buys_and_price_rises():
@@ -166,7 +185,7 @@ def test_status_reports_current_state():
 
 def test_attacking_weak_enemy_defeats_it_and_advances_floor():
     # The giant rat (20 HP) dies to two 12-damage strikes: 20 -> 8 -> 0.
-    # The second strike lands on a dead enemy, so the player takes no counter.
+    # The counter came on the first strike (enemy still alive at 8 HP).
     output = run_game(["attack", "attack", "status"])
     assert "You slay the giant rat! (+10 gold, +20 XP)" in output
     assert "Level up! You are now level 2" in output
@@ -195,40 +214,39 @@ def test_shop_buy_potion_with_insufficient_gold_is_rejected():
     assert "Not enough gold" in output
 
 
-def test_shop_buy_potion_after_two_kills_heals_and_deducts():
+def test_shop_buy_potion_after_two_kills_deducts_gold():
     # Two kills = 20 gold; buy a potion for 15, leaving 5 gold.
     output = run_game(
         ["attack", "attack", "attack", "attack", "shop", "potion", "back", "quit"]
     )
-    assert "You drink the potion" in output
+    assert "You buy a potion" in output
     assert "5 gold left" in output
+    assert "1 potions" in output
 
 
-def test_shop_buy_potion_at_full_hp_is_rejected():
-    # Four attacks slay the giant rat (20 HP) and the cave bat (25 HP):
-    # 20 gold.  The level-up fully heals to 60/60, so the first potion is
-    # rejected as "already at full HP" even though the player can afford it.
+def test_use_potion_at_full_hp_is_rejected():
+    # Four attacks: kill rat (level up to 60/60), kill bat.  After the bat,
+    # player is at 56/60, 20 gold.  Buy a potion (56/60, 5 gold, 1 potion).
+    # Use it: heals to 60/60, 0 potions.  Use again: no potions left.
     output = run_game(
-        ["attack", "attack", "attack", "attack", "shop", "potion", "back", "quit"]
+        ["attack", "attack", "attack", "attack", "shop", "potion", "back",
+         "use potion", "use potion", "quit"]
     )
-    assert "already at full HP" in output
-    assert "You drink the potion" not in output
+    assert "You buy a potion" in output
+    assert "You drink a potion" in output
+    assert "no potions" in output
 
 
 def test_shop_second_weapon_purchase_costs_more():
-    # Two kills = 20 gold buys the base upgrade, leaving 0 gold.  The cave bat
-    # (25 HP vs. the upgraded 20-dmg weapon) falls to two hits, bringing the
-    # total to 30 gold — enough for the now-35-gold second upgrade, with 5 to
-    # spare.
+    # Four attacks = 20 gold (two kills: rat 20 HP, bat 25 HP).  Buy the
+    # base weapon upgrade (20 gold), leaving 0.  Re-open the shop and the
+    # next upgrade should be listed at 35 gold.
     output = run_game(
-        ["attack", "attack", "shop", "weapon", "back",
-         "attack", "attack", "shop", "weapon", "back",
-         "status", "quit"]
+        ["attack", "attack", "attack", "attack", "shop", "weapon", "back",
+         "shop", "back", "quit"]
     )
-    # First upgrade: level-2 weapon 15 + 5 = 20 dmg; second: 20 + 5 = 25.
     assert "You buy a weapon upgrade!" in output
-    assert "weapon 25 dmg" in output
-    assert "5 gold" in output
+    assert "weapon - 35 gold" in output
 
 
 def test_shop_buy_weapon_raises_damage():
@@ -246,11 +264,51 @@ def test_use_potion_with_none_held_reports_none():
 
 
 def test_full_dungeon_clear_is_a_victory():
-    # With XP_PER_KILL = XP_PER_LEVEL = 20 the player levels up after every
-    # kill; each level up grants +10 max HP and +3 weapon damage and fully
-    # heals.  Weapon damage grows 12 -> 15 -> 18, so the dark knight (60 HP)
+    # Level 2 needs 40 XP, so level-ups happen on kills 1 and 3 only.
+    # Each level up grants +10 max HP and +3 weapon damage and fully heals.
+    # Weapon damage grows 12 -> 15 -> 18, so the dark knight (60 HP)
     # dies in 4 hits instead of 5.  Simulated final state: 50 HP, 50 gold.
     output = run_game(["attack"] * 17)
     assert "Victory!" in output
     assert "50 HP" in output
     assert "50 gold" in output
+
+
+# --------------------------------------------------------------------------
+# main: regression tests
+# --------------------------------------------------------------------------
+
+def test_upgrade_survives_level_up():
+    # Four attacks: 20 gold, level 2 (kill 1 levels up).  Buy weapon upgrade
+    # (20 gold).  Two more attacks kill the bat (kill 3 levels up to 3).
+    # Status should show 18 + 5 = 23 dmg.
+    output = run_game(
+        ["attack", "attack", "attack", "attack", "shop", "weapon", "back",
+         "attack", "attack", "status", "quit"]
+    )
+    assert "weapon 23 dmg" in output
+
+
+def test_blank_line_does_not_quit():
+    output = run_game(["", "quit"])
+    assert "Type a command" in output
+    assert "You leave the dungeon" in output
+
+
+def test_held_potion_round_trip():
+    # Four attacks: 20 gold, hp 56/60 (level 2 full heal then 4 counter hits
+    # on the bat).  Buy a potion, check status shows 1, use it to heal to 60.
+    output = run_game(
+        ["attack", "attack", "attack", "attack", "shop", "potion", "back",
+         "status", "use potion", "status", "quit"]
+    )
+    assert "1 potions" in output
+    assert "You drink a potion" in output
+    assert "0 potions" in output
+
+
+def test_combat_message_includes_numbers():
+    # First attack on the giant rat (20 HP): deals 12, enemy counters for 4.
+    output = run_game(["attack", "quit"])
+    assert "for 12 damage" in output
+    assert "hits back for 4" in output
