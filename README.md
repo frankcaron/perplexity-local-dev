@@ -8,7 +8,7 @@ The entire repo was built progressively using Perplexity's local PPLX Pro (27B) 
 
 ## The Agentic SDLC
 
-Perplexity Local Computer runs entirely on your machine: it has a workspace (this repo), a shell, and a set of skills in the spirit of PROSE that run the SDLC as follows:
+Perplexity Local Computer runs entirely on your machine. It has a workspace (this repo), a shell, and a set of skills in the spirit of PROSE that run the SDLC as follows:
 
 1. **Plan** — you describe an outcome and a plan is produced
 2. **Develop** — the plan is then used for test-driven development
