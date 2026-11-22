@@ -182,6 +182,7 @@ cython_debug/
 
 # Local Mac dev
 *.DS_Store
+plan.md
 
 # Skill upload bundles (build artifacts)
 *.zip
