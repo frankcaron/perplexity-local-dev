@@ -6,10 +6,10 @@ The point of this repo is not the code but the *workflow*: how a local agent can
 
 ## The Agentic SDLC
 
-Perplexity Local Computer runs entirely on your machine: it has a workspace (this repo), a shell, and a set of **skills** — reusable, natural-language instruction packs it loads on demand. Four skills power the loop: **`planner`** specs it out, **`develop`** builds, **`code-review`** checks, and **`document`** clarifies. The cycle looks like:
+Perplexity Local Computer runs entirely on your machine: it has a workspace (this repo), a shell, and a set of **skills** — reusable, natural-language instruction packs it loads on demand. The PROSE-like cycle is implemented as follows:
 
 1. **Plan** — you describe an outcome ("add a greeting function", "write tests"). The `planner` skill inspects the repo and writes a `plan.md` that specs out the approach, files, steps, and acceptance criteria.
-2. **Develop** — the `develop` skill runs discovery (detecting the repo's language, tooling, and conventions), then implements the change in that language with tests.
+2. **Develop** — the `builder` skill runs a squence, starting with `develop` skill runs discovery (detecting the repo's language, tooling, and conventions), then implements the change in that language with tests.
 3. **Review** — the `code-review` skill catches issues; the agent iterates until clean.
 4. **Document** — the `document` skill adds targeted comments and docstrings and updates the README with key call-outs.
 5. **Repeat** — each new request continues from the current repo state, so the project compounds over time.
